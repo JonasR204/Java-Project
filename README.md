@@ -5,7 +5,7 @@ Java-based traffic simulation that uses real streets around the Frankfurt UAS bu
 SUMO: https://sourceforge.net/projects/sumo/ 
 
 #How To Run:
-Download test1.sumoconfig and run it via sumo
+Download Demo1.sumoconfig and run it via sumo-gui
 
 #Contributors:
 Jonas, Hamza, Ali, Younes, David
