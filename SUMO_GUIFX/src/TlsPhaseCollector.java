@@ -1,8 +1,7 @@
 import java.util.*;
 
 /**
- * Sammelt und verwaltet die Phasen einer Ampel (Traffic Light)
- * Überarbeitet für JavaFX (ohne Swing-Referenzen)
+ * Sammelt und verwaltet Ampelphasen - ohne Swing UI (JavaFX kompatibel)
  */
 public class TlsPhaseCollector {
 
@@ -54,11 +53,6 @@ public class TlsPhaseCollector {
         }
     }
 
-    public PhaseEntry getCurrentPhase() {
-        int index = getCurrentPhaseIndex();
-        return getPhase(index);
-    }
-
     public void observe() throws Exception {
         int current = controller.getTlsPhase(tlsId);
 
@@ -79,7 +73,6 @@ public class TlsPhaseCollector {
                 PhaseEntry p = phases.get(phaseIndex);
                 p.duration = seconds;
                 
-                // Wenn es die aktuelle Phase ist, sofort anwenden
                 if (controller.getTlsPhase(tlsId) == phaseIndex) {
                     controller.setTlsPhaseDuration(tlsId, seconds);
                 }
@@ -96,7 +89,6 @@ public class TlsPhaseCollector {
         try {
             int currentPhase = controller.getTlsPhase(tlsId);
 
-            // Nur einmal pro Phase anwenden
             if (lastAppliedPhase != null && lastAppliedPhase == currentPhase) {
                 return;
             }
@@ -138,7 +130,7 @@ public class TlsPhaseCollector {
     }
 
     /**
-     * Setzt eine spezifische Phase (0 = erste Phase, etc.)
+     * Setzt eine spezifische Phase
      */
     public void setPhase(int phaseIndex) {
         try {
@@ -148,24 +140,5 @@ public class TlsPhaseCollector {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Findet die Phase-Index für eine bestimmte Farbe (vereinfacht)
-     * @param color 'g' für grün, 'y' für gelb, 'r' für rot
-     * @return Phase-Index oder -1 wenn nicht gefunden
-     */
-    public int findPhaseByColor(char color) {
-        char lowerColor = Character.toLowerCase(color);
-        
-        for (PhaseEntry p : phases) {
-            if (p.state != null && !p.state.isEmpty()) {
-                char firstChar = Character.toLowerCase(p.state.charAt(0));
-                if (firstChar == lowerColor) {
-                    return p.index;
-                }
-            }
-        }
-        return -1;
     }
 }

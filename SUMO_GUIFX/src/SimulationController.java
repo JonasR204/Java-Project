@@ -6,6 +6,10 @@ import de.tudresden.sumo.cmd.Lane;
 import de.tudresden.sumo.objects.SumoPosition2D;
 import de.tudresden.sumo.objects.SumoGeometry;
 import de.tudresden.sumo.objects.SumoColor;
+import de.tudresden.sumo.objects.SumoStringList;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import de.tudresden.sumo.cmd.Route;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -39,8 +43,23 @@ public class SimulationController {
             for (String id : getVehicleIds()) {
                 Point2D.Double pos = getVehiclePosition(id);
                 double speed = getVehicleSpeed(id);
+                String edgeId = getVehicleEdgeId(id);
 
-                dg.submit(new VehicleTelemetry(dg.now(), id, pos.x, pos.y, speed));
+
+
+                // oder getVehicleEdgeId(id)
+                String color = "unknown";               // erstmal simpel
+
+                dg.submit(new VehicleTelemetry(
+                        dg.now(),
+                        id,
+                        pos.x,
+                        pos.y,
+                        speed,
+                        edgeId,
+                        color
+                ));
+
             }
 
 // ---- DATA GATHERING (Ampeln) ----
@@ -86,11 +105,59 @@ public class SimulationController {
         running = false;
     }
 
+    public DataGatheringService getDataGathering() {
+        return dg;
+    }
+
+    public void exportReports(String baseName, BufferedImage chartImg, int vehiclesEver) {
+        try {
+            var snapshot = dg.getStore().snapshot();
+
+            String csv = baseName + ".csv";
+            String pdf = baseName + ".pdf";
+
+            System.out.println("[EXPORT] datapoints = " + snapshot.size());
+            System.out.println("[EXPORT] csv path = " + new File(csv).getAbsolutePath());
+            System.out.println("[EXPORT] pdf path = " + new File(pdf).getAbsolutePath());
+
+            // CSV
+            new CsvExporter().export(csv, snapshot);
+            System.out.println("[EXPORT] CSV export successful.");
+
+            // PDF (nur wenn chartImg vorhanden)
+            if (chartImg != null) {
+                PdfReportExporter.exportVehicleChart(pdf, chartImg, vehiclesEver);
+                System.out.println("[EXPORT] PDF export successful.");
+            } else {
+                System.out.println("[EXPORT] PDF skipped (chart image is null)");
+            }
+
+        } catch (Exception e) {
+            System.out.println("[EXPORT] Export failed!");
+            e.printStackTrace();
+        }
+    }
+
+
+
+
     private void ensureRunning() {
         if (!running)
             throw new IllegalStateException("SUMO not started");
     }
 
+    public void addTemporaryRoute(String routeId, List<String> edges) throws Exception {
+        ensureRunning();
+
+        SumoStringList ssl = new SumoStringList();
+        for (String e : edges) {
+            ssl.add(e);
+        }
+
+        conn.do_job_set(
+                Route.add(routeId, ssl)
+        );
+    }
 
     @SuppressWarnings("unchecked")
     public List<String> getVehicleIds() throws Exception {
@@ -274,6 +341,30 @@ public class SimulationController {
         );
     }
 
+    public String getVehicleEdgeId(String vehicleId) {
+        try {
+            // 1. Versuch: RoadID (entspricht EdgeID)
+            String roadId = (String) conn.do_job_get(Vehicle.getRoadID(vehicleId));
+            if (roadId != null && !roadId.isBlank()) {
+                return roadId;
+            }
+
+            // 2. Fallback: LaneID → EdgeID
+            String laneId = (String) conn.do_job_get(Vehicle.getLaneID(vehicleId));
+            if (laneId != null && laneId.contains("_")) {
+                return laneId.split("_")[0];
+            }
+
+        } catch (Exception e) {
+            // absichtlich leer: kein Crash im step()
+        }
+        return "";
+    }
+
+
+
+
+
     @SuppressWarnings("unchecked")
     public List<String> getControlledLanes(String tlsId) throws Exception {
         ensureRunning();
@@ -298,4 +389,14 @@ public class SimulationController {
         }
         return new ArrayList<>();
     }
+
+
+
+
+
+
+
 }
+
+
+
